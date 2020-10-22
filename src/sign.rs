@@ -51,7 +51,6 @@ macro_rules! impl_signed {
 			}
 		}
 
-		#[allow(clippy::panic)] // We want to panic if we accidentally implement this trait for the wrong types
 		impl Signed for $TUnsigned {
 			type Signed = $TSigned;
 			type Unsigned = $TUnsigned;
