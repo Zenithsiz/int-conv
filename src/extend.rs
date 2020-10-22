@@ -128,7 +128,7 @@ impl_sign_extend! { i16  =>      i32, i64, i128 }
 impl_sign_extend! { i32  =>           i64, i128 }
 impl_sign_extend! { i64  =>                i128 }
 
-/// Macro to help implement [`ZeroExtend`]
+/// Macro to help implement [`Extend`]
 macro_rules! impl_extend {
 	($T:ty => $( $U:ty ),+ $(,)? => $method:ident) => {
 		$(
