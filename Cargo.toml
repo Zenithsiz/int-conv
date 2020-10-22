@@ -4,12 +4,12 @@ description = "Explicit integer conversions"
 readme = "README.md"
 license = "MIT"
 license_file = "LICENSE"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Filipe Rodrigues <filipejacintorodrigues1@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/Zenithsiz/int-conv"
 keywords = ["no_std"]
-categories = ["Encoding", "No standard library"]
+categories = ["encoding", "no-std"]
 
 [dependencies]
 
