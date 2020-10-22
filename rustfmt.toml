@@ -1,0 +1,12 @@
+hard_tabs = true
+newline_style = "Unix"
+use_field_init_shorthand = true
+fn_args_layout = "Compressed"
+merge_derives = false
+max_width = 150
+use_small_heuristics = "Default"
+reorder_imports = true
+reorder_modules = true
+remove_nested_parens = true
+use_try_shorthand = true
+force_explicit_abi = true
