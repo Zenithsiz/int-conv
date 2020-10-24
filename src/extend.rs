@@ -4,7 +4,7 @@
 //! an integer past it's range.
 
 // Imports
-use crate::{IsSigned, Signed};
+use crate::Signed;
 use core::mem;
 
 /// Zero extend
@@ -20,7 +20,7 @@ pub trait ZeroExtend<T>: Sized {
 ///
 /// This trait serves to extend integers with their
 /// sign signal.
-pub trait SignExtend<T: IsSigned>: Sized + IsSigned {
+pub trait SignExtend<T>: Sized {
 	/// Sign extends this type
 	fn sign_extend(self) -> T;
 }
@@ -43,7 +43,7 @@ impl<T> ZeroExtend<T> for T {
 }
 
 /// Sign extending to the same type simply returns it
-impl<T: IsSigned> SignExtend<T> for T {
+impl<T> SignExtend<T> for T {
 	#[inline]
 	fn sign_extend(self) -> Self {
 		self
@@ -59,6 +59,10 @@ impl<T> Extend<T> for T {
 }
 
 /// Macro to help implement [`ZeroExtend`]
+///
+/// Note: Regardless if `GAT`s are available, a `impl ZeroExtend<&'b U> for &'a T` isn't
+///       possible, as it would require memory available for `U` at `T`, which we don't
+///       know from just receiving a reference to `T`.
 macro_rules! impl_zero_extend {
 	($T:ty => $( $U:ty ),+ $(,)?) => {
 		$(
@@ -79,6 +83,17 @@ macro_rules! impl_zero_extend {
 						as $U
 				}
 			}
+
+			// TODO: Replace with generic version once specialization is stable
+			impl<'a> ZeroExtend<$U> for &'a $T
+			where
+				$T: ZeroExtend<$U>
+			{
+				#[inline]
+				fn zero_extend(self) -> $U {
+					<$T as ZeroExtend<$U>>::zero_extend(*self)
+				}
+			}
 		)+
 	};
 }
@@ -96,6 +111,10 @@ impl_zero_extend! { i32  =>           i64, i128 }
 impl_zero_extend! { i64  =>                i128 }
 
 /// Macro to help implement [`SignExtend`]
+///
+/// Note: Regardless if `GAT`s are available, a `impl SignExtend<&'b U> for &'a T` isn't
+///       possible, as it would require memory available for `U` at `T`, which we don't
+///       know from just receiving a reference to `T`.
 macro_rules! impl_sign_extend {
 	($T:ty => $( $U:ty ),+ $(,)?) => {
 		$(
@@ -104,8 +123,6 @@ macro_rules! impl_sign_extend {
 			::static_assertions::const_assert!(mem::size_of::<$U>() >= mem::size_of::<$T>());
 
 			impl SignExtend<$U> for $T
-			where
-				$U: IsSigned
 			{
 				#[inline]
 				#[allow(clippy::as_conversions)]
@@ -116,6 +133,17 @@ macro_rules! impl_sign_extend {
 						as <$T as Signed>::Signed
 						as <$U as Signed>::Signed
 						as $U
+				}
+			}
+
+			// TODO: Replace with generic version once specialization is stable
+			impl<'a> SignExtend<$U> for &'a $T
+			where
+				$T: SignExtend<$U>
+			{
+				#[inline]
+				fn sign_extend(self) -> $U {
+					<$T as SignExtend<$U>>::sign_extend(*self)
 				}
 			}
 		)+
@@ -129,6 +157,10 @@ impl_sign_extend! { i32  =>           i64, i128 }
 impl_sign_extend! { i64  =>                i128 }
 
 /// Macro to help implement [`Extend`]
+///
+/// Note: Regardless if `GAT`s are available, a `impl Extend<&'b U> for &'a T` isn't
+///       possible, as it would require memory available for `U` at `T`, which we don't
+///       know from just receiving a reference to `T`.
 macro_rules! impl_extend {
 	($T:ty => $( $U:ty ),+ $(,)? => $method:ident) => {
 		$(
@@ -137,6 +169,17 @@ macro_rules! impl_extend {
 				#[inline]
 				fn extend(self) -> $U {
 					self.$method()
+				}
+			}
+
+			// TODO: Replace with generic version once specialization is stable
+			impl<'a> Extend<$U> for &'a $T
+			where
+				$T: Extend<$U>
+			{
+				#[inline]
+				fn extend(self) -> $U {
+					<$T as Extend<$U>>::extend(*self)
 				}
 			}
 		)+
@@ -169,17 +212,17 @@ pub trait ZeroExtended: Sized {
 impl<T> ZeroExtended for T {}
 
 /// Helper trait for [`SignExtend`] to be used with turbofish syntax
-pub trait SignExtended: IsSigned {
+pub trait SignExtended {
 	/// Sign extends this type
 	#[inline]
-	fn sign_extended<T: IsSigned>(self) -> T
+	fn sign_extended<T>(self) -> T
 	where
 		Self: SignExtend<T>,
 	{
 		self.sign_extend()
 	}
 }
-impl<T: IsSigned> SignExtended for T {}
+impl<T> SignExtended for T {}
 
 /// Helper trait for [`Extend`] to be used with turbofish syntax
 pub trait Extended {

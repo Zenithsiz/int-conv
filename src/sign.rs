@@ -4,6 +4,10 @@
 //! such as `i8` / `u8`.
 
 /// Types with signed and unsigned variants
+///
+/// Note that references don't currently implement this trait due to
+/// lack of `GAT`s, which are required to specify that a `&'a u8` may
+/// be cast to a `&'a i8` with the same lifetime.
 pub trait Signed {
 	/// Signed variant of this type
 	type Signed;
