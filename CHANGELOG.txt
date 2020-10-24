@@ -1,0 +1,16 @@
+
+# 0.1.3
+
+Added insight on implementations on references for most traits.
+Added `impl *Extend<U> for &'a T` implementations for existing builtin types `T`, `U` (i*, u*).
+Added `impl Truncate<U> for &'a T` implementations for existing builtin types `T`, `U` (i*, u*).
+
+
+# 0.1.2
+
+Now ignoring Vscode folder in `.gitignore`.
+Fixed documentation typo in `README`.
+
+# 0.1.1
+
+Fixed wrong `crates.io` category slugs on `Cargo.toml`.
