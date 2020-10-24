@@ -34,7 +34,13 @@ pub trait Join: Split {
 	fn join(lo: <Self as Split>::Lo, hi: <Self as Split>::Lo) -> Self;
 }
 
-// Macro to help implement `Split` / `Join`
+/// Macro to help implement `Split` / `Join`
+///
+/// Note: We don't currently implement `Split` for references, as
+///       we'd have `Hi` and `Lo` be references as well, but we
+///       cannot express this relationship without `GAT`s.
+///       As for join, we don't implement it on references, as
+///       it does not make sense for the function.
 macro_rules! impl_split_join {
 	($T:ty => $Hi:ty : $Lo:ty) => {
 		// Make sure that `T` is made up of `Lo` and `Hi`

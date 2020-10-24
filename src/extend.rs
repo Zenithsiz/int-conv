@@ -59,6 +59,10 @@ impl<T> Extend<T> for T {
 }
 
 /// Macro to help implement [`ZeroExtend`]
+///
+/// Note: Regardless if `GAT`s are available, a `impl ZeroExtend<&'b U> for &'a T` isn't
+///       possible, as it would require memory available for `U` at `T`, which we don't
+///       know from just receiving a reference to `T`.
 macro_rules! impl_zero_extend {
 	($T:ty => $( $U:ty ),+ $(,)?) => {
 		$(
@@ -86,14 +90,8 @@ macro_rules! impl_zero_extend {
 				$T: ZeroExtend<$U>
 			{
 				#[inline]
-				#[allow(clippy::as_conversions)]
 				fn zero_extend(self) -> $U {
-					// Casting between signedness is a no-op.
-					// Casting from a smaller to larger unsigned integer will zero-extend.
-					(*self)
-						as <$T as Signed>::Unsigned
-						as <$U as Signed>::Unsigned
-						as $U
+					<$T as ZeroExtend<$U>>::zero_extend(*self)
 				}
 			}
 		)+
@@ -113,6 +111,10 @@ impl_zero_extend! { i32  =>           i64, i128 }
 impl_zero_extend! { i64  =>                i128 }
 
 /// Macro to help implement [`SignExtend`]
+///
+/// Note: Regardless if `GAT`s are available, a `impl SignExtend<&'b U> for &'a T` isn't
+///       possible, as it would require memory available for `U` at `T`, which we don't
+///       know from just receiving a reference to `T`.
 macro_rules! impl_sign_extend {
 	($T:ty => $( $U:ty ),+ $(,)?) => {
 		$(
@@ -140,14 +142,8 @@ macro_rules! impl_sign_extend {
 				$T: SignExtend<$U>
 			{
 				#[inline]
-				#[allow(clippy::as_conversions)]
 				fn sign_extend(self) -> $U {
-					// Casting between signedness is a no-op.
-					// Casting from a smaller to larger unsigned integer will zero-extend.
-					(*self)
-						as <$T as Signed>::Unsigned
-						as <$U as Signed>::Unsigned
-						as $U
+					<$T as SignExtend<$U>>::sign_extend(*self)
 				}
 			}
 		)+
@@ -161,6 +157,10 @@ impl_sign_extend! { i32  =>           i64, i128 }
 impl_sign_extend! { i64  =>                i128 }
 
 /// Macro to help implement [`Extend`]
+///
+/// Note: Regardless if `GAT`s are available, a `impl Extend<&'b U> for &'a T` isn't
+///       possible, as it would require memory available for `U` at `T`, which we don't
+///       know from just receiving a reference to `T`.
 macro_rules! impl_extend {
 	($T:ty => $( $U:ty ),+ $(,)? => $method:ident) => {
 		$(
@@ -178,9 +178,8 @@ macro_rules! impl_extend {
 				$T: Extend<$U>
 			{
 				#[inline]
-				#[allow(clippy::as_conversions)]
 				fn extend(self) -> $U {
-					(*self).$method()
+					<$T as Extend<$U>>::extend(*self)
 				}
 			}
 		)+

@@ -20,7 +20,11 @@ impl<T> Truncate<T> for T {
 	}
 }
 
-// Macro to help implement `Truncate`
+/// Macro to help implement `Truncate`
+///
+/// Note: We don't currently `Truncate<&'b U> for &'a T` due
+///       to requiring `GAT`s, but we do implement `Truncate<U> for &'a T`
+///       by simply copying the underlying type.
 macro_rules! impl_truncate {
 	($T:ty => $($U:ty),* $(,)?) => {
 		$(
@@ -29,12 +33,17 @@ macro_rules! impl_truncate {
 
 			impl Truncate<$U> for $T {
 				#[inline]
+				#[allow(clippy::as_conversions)]
 				fn truncate(self) -> $U {
-					// Casting from a larger to a smaller integer, truncates
-					#[allow(clippy::as_conversions)]
-					{
-						self as $U
-					}
+					// Casting from a larger to a smaller integer truncates
+					self as $U
+				}
+			}
+
+			impl<'a> Truncate<$U> for &'a $T {
+				#[inline]
+				fn truncate(self) -> $U {
+					<$T as Truncate<$U>>::truncate(*self)
 				}
 			}
 		)*
