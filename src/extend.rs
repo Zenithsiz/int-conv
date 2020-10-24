@@ -4,7 +4,7 @@
 //! an integer past it's range.
 
 // Imports
-use crate::{IsSigned, Signed};
+use crate::Signed;
 use core::mem;
 
 /// Zero extend
@@ -20,7 +20,7 @@ pub trait ZeroExtend<T>: Sized {
 ///
 /// This trait serves to extend integers with their
 /// sign signal.
-pub trait SignExtend<T: IsSigned>: Sized + IsSigned {
+pub trait SignExtend<T>: Sized {
 	/// Sign extends this type
 	fn sign_extend(self) -> T;
 }
@@ -43,7 +43,7 @@ impl<T> ZeroExtend<T> for T {
 }
 
 /// Sign extending to the same type simply returns it
-impl<T: IsSigned> SignExtend<T> for T {
+impl<T> SignExtend<T> for T {
 	#[inline]
 	fn sign_extend(self) -> Self {
 		self
@@ -79,6 +79,23 @@ macro_rules! impl_zero_extend {
 						as $U
 				}
 			}
+
+			// TODO: Replace with generic version once specialization is stable
+			impl<'a> ZeroExtend<$U> for &'a $T
+			where
+				$T: ZeroExtend<$U>
+			{
+				#[inline]
+				#[allow(clippy::as_conversions)]
+				fn zero_extend(self) -> $U {
+					// Casting between signedness is a no-op.
+					// Casting from a smaller to larger unsigned integer will zero-extend.
+					(*self)
+						as <$T as Signed>::Unsigned
+						as <$U as Signed>::Unsigned
+						as $U
+				}
+			}
 		)+
 	};
 }
@@ -104,8 +121,6 @@ macro_rules! impl_sign_extend {
 			::static_assertions::const_assert!(mem::size_of::<$U>() >= mem::size_of::<$T>());
 
 			impl SignExtend<$U> for $T
-			where
-				$U: IsSigned
 			{
 				#[inline]
 				#[allow(clippy::as_conversions)]
@@ -115,6 +130,23 @@ macro_rules! impl_sign_extend {
 					self
 						as <$T as Signed>::Signed
 						as <$U as Signed>::Signed
+						as $U
+				}
+			}
+
+			// TODO: Replace with generic version once specialization is stable
+			impl<'a> SignExtend<$U> for &'a $T
+			where
+				$T: SignExtend<$U>
+			{
+				#[inline]
+				#[allow(clippy::as_conversions)]
+				fn sign_extend(self) -> $U {
+					// Casting between signedness is a no-op.
+					// Casting from a smaller to larger unsigned integer will zero-extend.
+					(*self)
+						as <$T as Signed>::Unsigned
+						as <$U as Signed>::Unsigned
 						as $U
 				}
 			}
@@ -137,6 +169,18 @@ macro_rules! impl_extend {
 				#[inline]
 				fn extend(self) -> $U {
 					self.$method()
+				}
+			}
+
+			// TODO: Replace with generic version once specialization is stable
+			impl<'a> Extend<$U> for &'a $T
+			where
+				$T: Extend<$U>
+			{
+				#[inline]
+				#[allow(clippy::as_conversions)]
+				fn extend(self) -> $U {
+					(*self).$method()
 				}
 			}
 		)+
@@ -169,17 +213,17 @@ pub trait ZeroExtended: Sized {
 impl<T> ZeroExtended for T {}
 
 /// Helper trait for [`SignExtend`] to be used with turbofish syntax
-pub trait SignExtended: IsSigned {
+pub trait SignExtended {
 	/// Sign extends this type
 	#[inline]
-	fn sign_extended<T: IsSigned>(self) -> T
+	fn sign_extended<T>(self) -> T
 	where
 		Self: SignExtend<T>,
 	{
 		self.sign_extend()
 	}
 }
-impl<T: IsSigned> SignExtended for T {}
+impl<T> SignExtended for T {}
 
 /// Helper trait for [`Extend`] to be used with turbofish syntax
 pub trait Extended {
