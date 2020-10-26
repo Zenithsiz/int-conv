@@ -15,11 +15,14 @@ pub trait Signed {
 	/// Unsigned variant of this type
 	type Unsigned;
 
-	/// Reinterprets this type as unsigned
+	/// Reinterprets this value as unsigned
 	fn as_unsigned(self) -> Self::Unsigned;
 
-	/// Reinterprets this type as signed
+	/// Reinterprets this value as signed
 	fn as_signed(self) -> Self::Signed;
+
+	/// Returns the absolute value of `self` as unsigned.
+	fn abs_unsigned(self) -> Self::Unsigned;
 
 	// TODO: Maybe add a `fn signal() -> Signal` method? Or maybe two `is_positive` / `is_negative` methods.
 }
@@ -53,6 +56,17 @@ macro_rules! impl_signed {
 			fn as_signed(self) -> Self::Signed {
 				self
 			}
+
+			#[inline]
+			fn abs_unsigned(self) -> Self::Unsigned {
+				// Note: Branch is optimized by compiler in release mode.
+				if self < 0 {
+					// Note: We don't use `-self.as_unsigned()` because it can panic
+					(!self.as_unsigned()).wrapping_add(1)
+				} else {
+					self.as_unsigned()
+				}
+			}
 		}
 
 		impl Signed for $TUnsigned {
@@ -69,6 +83,12 @@ macro_rules! impl_signed {
 			fn as_signed(self) -> Self::Signed {
 				// Casting between integers of the same size is a no-op
 				self as $TSigned
+			}
+
+			#[inline]
+			fn abs_unsigned(self) -> Self::Unsigned {
+				// Note: We're already unsigned
+				self
 			}
 		}
 	};
@@ -115,38 +135,122 @@ mod tests {
 
 	#[test]
 	#[rustfmt::skip]
-	fn as_unsigned() {
-		assert_eq!(   u8::as_unsigned(1), 1);
-		assert_eq!(  u16::as_unsigned(1), 1);
-		assert_eq!(  u32::as_unsigned(1), 1);
-		assert_eq!(  u64::as_unsigned(1), 1);
-		assert_eq!( u128::as_unsigned(1), 1);
+	fn as_unsigned_positive() {
+		assert_eq!(u8   ::as_unsigned(1), 1);
+		assert_eq!(u16  ::as_unsigned(1), 1);
+		assert_eq!(u32  ::as_unsigned(1), 1);
+		assert_eq!(u64  ::as_unsigned(1), 1);
+		assert_eq!(u128 ::as_unsigned(1), 1);
 		assert_eq!(usize::as_unsigned(1), 1);
-		
-		assert_eq!(   i8::as_unsigned(-1), u8   ::MAX);
-		assert_eq!(  i16::as_unsigned(-1), u16  ::MAX);
-		assert_eq!(  i32::as_unsigned(-1), u32  ::MAX);
-		assert_eq!(  i64::as_unsigned(-1), u64  ::MAX);
-		assert_eq!( i128::as_unsigned(-1), u128 ::MAX);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn as_unsigned_negative() {
+		assert_eq!(i8   ::as_unsigned(-1), u8   ::MAX);
+		assert_eq!(i16  ::as_unsigned(-1), u16  ::MAX);
+		assert_eq!(i32  ::as_unsigned(-1), u32  ::MAX);
+		assert_eq!(i64  ::as_unsigned(-1), u64  ::MAX);
+		assert_eq!(i128 ::as_unsigned(-1), u128 ::MAX);
 		assert_eq!(isize::as_unsigned(-1), usize::MAX);
 	}
 
 	#[test]
-	#[allow(clippy::cast_possible_wrap)] // We want to wrap around in this test
 	#[rustfmt::skip]
-	fn as_signed() {
-		assert_eq!(   u8::as_signed(1), 1);
-		assert_eq!(  u16::as_signed(1), 1);
-		assert_eq!(  u32::as_signed(1), 1);
-		assert_eq!(  u64::as_signed(1), 1);
-		assert_eq!( u128::as_signed(1), 1);
+	fn as_unsigned_negative_big() {
+		assert_eq!(i8   ::as_unsigned(i8   ::MIN), u8   ::MAX / 2 + 1);
+		assert_eq!(i16  ::as_unsigned(i16  ::MIN), u16  ::MAX / 2 + 1);
+		assert_eq!(i32  ::as_unsigned(i32  ::MIN), u32  ::MAX / 2 + 1);
+		assert_eq!(i64  ::as_unsigned(i64  ::MIN), u64  ::MAX / 2 + 1);
+		assert_eq!(i128 ::as_unsigned(i128 ::MIN), u128 ::MAX / 2 + 1);
+		assert_eq!(isize::as_unsigned(isize::MIN), usize::MAX / 2 + 1);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn as_signed_positive() {
+		assert_eq!(u8   ::as_signed(1), 1);
+		assert_eq!(u16  ::as_signed(1), 1);
+		assert_eq!(u32  ::as_signed(1), 1);
+		assert_eq!(u64  ::as_signed(1), 1);
+		assert_eq!(u128 ::as_signed(1), 1);
 		assert_eq!(usize::as_signed(1), 1);
-		
-		assert_eq!(   i8::as_signed(u8   ::MAX as    i8), -1);
-		assert_eq!(  i16::as_signed(u16  ::MAX as   i16), -1);
-		assert_eq!(  i32::as_signed(u32  ::MAX as   i32), -1);
-		assert_eq!(  i64::as_signed(u64  ::MAX as   i64), -1);
-		assert_eq!( i128::as_signed(u128 ::MAX as  i128), -1);
-		assert_eq!(isize::as_signed(usize::MAX as isize), -1);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn as_signed_negative() {
+		assert_eq!(i8   ::as_signed(u8   ::MAX.as_signed()), -1);
+		assert_eq!(i16  ::as_signed(u16  ::MAX.as_signed()), -1);
+		assert_eq!(i32  ::as_signed(u32  ::MAX.as_signed()), -1);
+		assert_eq!(i64  ::as_signed(u64  ::MAX.as_signed()), -1);
+		assert_eq!(i128 ::as_signed(u128 ::MAX.as_signed()), -1);
+		assert_eq!(isize::as_signed(usize::MAX.as_signed()), -1);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn abs_unsigned_unsigned() {
+		assert_eq!(u8   ::abs_unsigned(1), 1);
+		assert_eq!(u16  ::abs_unsigned(1), 1);
+		assert_eq!(u32  ::abs_unsigned(1), 1);
+		assert_eq!(u64  ::abs_unsigned(1), 1);
+		assert_eq!(u128 ::abs_unsigned(1), 1);
+		assert_eq!(usize::abs_unsigned(1), 1);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn abs_unsigned_unsigned_big() {
+		assert_eq!(u8   ::abs_unsigned(u8   ::MAX), u8   ::MAX);
+		assert_eq!(u16  ::abs_unsigned(u16  ::MAX), u16  ::MAX);
+		assert_eq!(u32  ::abs_unsigned(u32  ::MAX), u32  ::MAX);
+		assert_eq!(u64  ::abs_unsigned(u64  ::MAX), u64  ::MAX);
+		assert_eq!(u128 ::abs_unsigned(u128 ::MAX), u128 ::MAX);
+		assert_eq!(usize::abs_unsigned(usize::MAX), usize::MAX);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn abs_unsigned_signed_positive() {
+		assert_eq!(i8   ::abs_unsigned(1), 1);
+		assert_eq!(i16  ::abs_unsigned(1), 1);
+		assert_eq!(i32  ::abs_unsigned(1), 1);
+		assert_eq!(i64  ::abs_unsigned(1), 1);
+		assert_eq!(i128 ::abs_unsigned(1), 1);
+		assert_eq!(isize::abs_unsigned(1), 1);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn abs_unsigned_signed_positive_big() {
+		assert_eq!(i8   ::abs_unsigned(i8   ::MAX), u8   ::MAX / 2);
+		assert_eq!(i16  ::abs_unsigned(i16  ::MAX), u16  ::MAX / 2);
+		assert_eq!(i32  ::abs_unsigned(i32  ::MAX), u32  ::MAX / 2);
+		assert_eq!(i64  ::abs_unsigned(i64  ::MAX), u64  ::MAX / 2);
+		assert_eq!(i128 ::abs_unsigned(i128 ::MAX), u128 ::MAX / 2);
+		assert_eq!(isize::abs_unsigned(isize::MAX), usize::MAX / 2);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn abs_unsigned_signed_negative() {
+		assert_eq!(i8   ::abs_unsigned(-1), 1);
+		assert_eq!(i16  ::abs_unsigned(-1), 1);
+		assert_eq!(i32  ::abs_unsigned(-1), 1);
+		assert_eq!(i64  ::abs_unsigned(-1), 1);
+		assert_eq!(i128 ::abs_unsigned(-1), 1);
+		assert_eq!(isize::abs_unsigned(-1), 1);
+	}
+
+	#[test]
+	#[rustfmt::skip]
+	fn abs_unsigned_signed_negative_big() {
+		assert_eq!(i8   ::abs_unsigned(i8   ::MIN), u8   ::MAX / 2 + 1);
+		assert_eq!(i16  ::abs_unsigned(i16  ::MIN), u16  ::MAX / 2 + 1);
+		assert_eq!(i32  ::abs_unsigned(i32  ::MIN), u32  ::MAX / 2 + 1);
+		assert_eq!(i64  ::abs_unsigned(i64  ::MIN), u64  ::MAX / 2 + 1);
+		assert_eq!(i128 ::abs_unsigned(i128 ::MIN), u128 ::MAX / 2 + 1);
+		assert_eq!(isize::abs_unsigned(isize::MIN), usize::MAX / 2 + 1);
 	}
 }
