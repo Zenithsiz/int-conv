@@ -25,6 +25,8 @@
 #![allow(clippy::integer_arithmetic)]
 // We want to explicitly use the type we're converting to in implementations
 #![allow(clippy::use_self)]
+// We use integer division when we want to discard any decimal parts
+#![allow(clippy::integer_division)]
 // In tests, we make sure `as` conversions are correct.
 #![cfg_attr(test, allow(clippy::as_conversions))]
 // Tests sometimes contain a lot of cases, but they're all simple

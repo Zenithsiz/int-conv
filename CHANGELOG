@@ -1,4 +1,10 @@
 
+# 0.1.4
+
+Split items in `extend` module into their own modules inside `extend`.
+Added `Signed::abs_unsigned` method.
+Improved `sign` module's tests.
+
 # 0.1.3
 
 Added insight on implementations on references for most traits.
